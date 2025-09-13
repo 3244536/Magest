@@ -14,7 +14,7 @@ if 'operations' not in st.session_state:
         {"id": 3, "client_id": 2, "valeur": 2300000, "taux": 15, "duree": 3, "statut": "termine"}
     ]
 if 'paiements' not in st.session_state:
-    st.session_state.paiements = [
+    st.session_state.paiements = [ 
         {"id": 1, "client_id": 1, "operation_id": 1, "type": "ordinaire", "montant": 158000, "date": "2025-10-15"},
         {"id": 2, "client_id": 2, "operation_id": 3, "type": "anticipe", "montant": 345000, "date": "2025-09-20"}
     ]
