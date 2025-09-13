@@ -1,1 +1,86 @@
+/* Même CSS que dans la version HTML/JS précédente */
+:root {
+    --couleur-primaire: #ff6b6b;
+    --couleur-secondaire: #4ecdc4;
+    --couleur-succes: #61d498;
+    --couleur-danger: #ff6b6b;
+    --couleur-texte: #2d3436;
+    --couleur-fond: #f5f6fa;
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--couleur-fond);
+    color: var(--couleur-texte);
+    margin: 0;
+    padding: 0;
+}
+header {
+    background-color: var(--couleur-primaire);
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+nav {
+    display: flex;
+    justify-content: center;
+    background-color: var(--couleur-secondaire);
+    padding: 0.5rem;
+}
+nav a {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    margin: 0 0.5rem;
+    border-radius: 4px;
+}
+nav a:hover {
+    background-color: var(--couleur-primaire);
+}
+table {
+    width: 90%;
+    margin: 1rem auto;
+    border-collapse: collapse;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+th {
+    background-color: var(--couleur-primaire);
+    color: white;
+}
+tr.en-cours {
+    background-color: var(--couleur-succes);
+}
+tr.termine {
+    background-color: #dfe6e9;
+}
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin: 0.25rem;
+}
+.btn-ajouter { background-color: var(--couleur-succes); color: white; }
+.btn-modifier { background-color: #3498db; color: white; }
+.btn-supprimer { background-color: var(--couleur-danger); color: white; }
+form {
+    width: 90%;
+    margin: 1rem auto;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+input, select {
+    width: 100%;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
 
