@@ -9,9 +9,9 @@ if 'clients' not in st.session_state:
     ]
 if 'operations' not in st.session_state:
     st.session_state.operations = [
-        {"id": 1, "client_id": 1, "valeur": 1580000, "taux": 10, "duree": 6.5, "statut": "en-cours"},
-        {"id": 2, "client_id": 1, "valeur": 2000000, "taux": 12, "duree": 4, "statut": "en-cours"},
-        {"id": 3, "client_id": 2, "valeur": 2300000, "taux": 15, "duree": 3, "statut": "termine"}
+        {"id": 1, "client_id": 1, "valeur": 1580000, "taux": 10, "duree": 6.5, "statut": "en-cours", "date_debut": "2025-01-01"},
+        {"id": 2, "client_id": 1, "valeur": 2000000, "taux": 12, "duree": 4, "statut": "en-cours", "date_debut": "2025-02-15"},
+        {"id": 3, "client_id": 2, "valeur": 2300000, "taux": 15, "duree": 3, "statut": "termine", "date_debut": "2024-11-10"}
     ]
 if 'paiements' not in st.session_state:
     st.session_state.paiements = [
@@ -27,10 +27,17 @@ def get_client_by_id(client_id):
     return next((c for c in st.session_state.clients if c["id"] == client_id), None)
 
 def get_operations_by_client(client_id):
-    return [op for op in st.session_state.operations if op["client_id"] == client_id]
+    return [op for op in st.session_state.operations if op["client_id"] == client_id and op["statut"] == "en-cours"]
 
 def get_operation_by_id(op_id):
     return next((op for op in st.session_state.operations if op["id"] == op_id), None)
+
+def calculer_prochaine_echeance(op):
+    date_debut = datetime.strptime(op["date_debut"], "%Y-%m-%d")
+    duree_mois = op["duree"]
+    # Calcul simplifié : échéance = date_debut + durée en mois
+    prochaine_echeance = date_debut + timedelta(days=30*duree_mois)
+    return prochaine_echeance.strftime("%d/%m/%Y")
 
 # --- Styles CSS personnalisés ---
 st.markdown("""
@@ -55,6 +62,13 @@ st.markdown("""
         margin: 10px 0;
         border-radius: 5px;
     }
+    .client-card {
+        background-color: #fce4ec;
+        border-left: 5px solid #e91e63;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+    }
     .statut-en-cours {
         color: #2196F3;
         font-weight: bold;
@@ -62,13 +76,6 @@ st.markdown("""
     .statut-termine {
         color: #8bc34a;
         font-weight: bold;
-    }
-    .client-card {
-        background-color: #fce4ec;
-        border-left: 5px solid #e91e63;
-        padding: 10px;
-        margin: 10px 0;
-        border-radius: 5px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -82,7 +89,7 @@ tab_accueil, tab_clients, tab_operations, tab_paiements = st.tabs(
     ["🏠 Tableau de bord", "👥 Clients", "📦 Opérations", "💰 Paiements"]
 )
 
-# --- Onglet Accueil (Tableau de bord) ---
+# --- Onglet Accueil (Tableau de bord mis à jour) ---
 with tab_accueil:
     st.header("📊 Tableau de bord")
     st.subheader("Opérations en cours")
@@ -95,12 +102,13 @@ with tab_accueil:
             client = get_client_by_id(op["client_id"])
             if client:
                 mensualite = (op["valeur"] * (1 + op["taux"]/100)) / op["duree"]
-                echeance = (datetime.now() + timedelta(days=30)).strftime("%d/%m/%Y")
+                prochaine_echeance = calculer_prochaine_echeance(op)
                 st.markdown(f"""
                 <div class="operation-card">
                     <p><strong>Client :</strong> {client['nom']}</p>
+                    <p><strong>Opération ID :</strong> {op['id']}</p>
                     <p><strong>Valeur marchandise :</strong> {format_montant(op['valeur'])}</p>
-                    <p><strong>Prochaine échéance :</strong> {echeance}</p>
+                    <p><strong>Prochaine échéance :</strong> {prochaine_echeance}</p>
                     <p><strong>Montant à payer :</strong> {format_montant(int(mensualite))}</p>
                     <p><strong>Statut :</strong> <span class="statut-en-cours">{op['statut']}</span></p>
                 </div>
@@ -137,10 +145,9 @@ with tab_clients:
             <div class="client-card">
                 <p><strong>Description :</strong> {client['description']}</p>
                 <p><strong>Téléphone :</strong> {client['tel']}</p>
-                {st.button(f"🗑️ Supprimer", key=f"suppr_client_{client['id']}")}
             </div>
             """, unsafe_allow_html=True)
-            if st.button(f"Supprimer {client['id']}", key=f"suppr_client_hidden_{client['id']}"):
+            if st.button(f"🗑️ Supprimer", key=f"suppr_client_{client['id']}"):
                 st.session_state.clients = [c for c in st.session_state.clients if c["id"] != client["id"]]
                 st.rerun()
 
@@ -160,6 +167,7 @@ with tab_operations:
             taux = st.number_input("Taux de bénéfice (%) *", min_value=1, key="taux_op")
             duree = st.number_input("Durée (mois) *", min_value=0.1, format="%.1f", key="duree_op")
             statut = st.selectbox("Statut", ["en-cours", "termine"], key="statut_op")
+            date_debut = st.date_input("Date de début *", datetime.now(), key="date_debut_op")
             submitted = st.form_submit_button("Ajouter")
             if submitted:
                 new_id = max([op["id"] for op in st.session_state.operations], default=0) + 1
@@ -169,7 +177,8 @@ with tab_operations:
                     "valeur": valeur,
                     "taux": taux,
                     "duree": duree,
-                    "statut": statut
+                    "statut": statut,
+                    "date_debut": date_debut.strftime("%Y-%m-%d")
                 })
                 st.success("✅ Opération ajoutée avec succès !")
 
@@ -181,18 +190,19 @@ with tab_operations:
             st.markdown(f"""
             <div class="operation-card">
                 <p><strong>Client :</strong> {client['nom']}</p>
+                <p><strong>ID :</strong> {op['id']}</p>
                 <p><strong>Valeur :</strong> {format_montant(op['valeur'])}</p>
                 <p><strong>Taux :</strong> {op['taux']}%</p>
                 <p><strong>Durée :</strong> {op['duree']} mois</p>
                 <p><strong>Statut :</strong> <span class="statut-{op['statut']}">{op['statut']}</span></p>
-                {st.button(f"🗑️ Supprimer", key=f"suppr_op_{op['id']}")}
+                <p><strong>Date début :</strong> {op['date_debut']}</p>
             </div>
             """, unsafe_allow_html=True)
-            if st.button(f"Supprimer {op['id']}", key=f"suppr_op_hidden_{op['id']}"):
+            if st.button(f"🗑️ Supprimer", key=f"suppr_op_{op['id']}"):
                 st.session_state.operations = [o for o in st.session_state.operations if o["id"] != op["id"]]
                 st.rerun()
 
-# --- Onglet Paiements ---
+# --- Onglet Paiements (avec sélection client → opérations) ---
 with tab_paiements:
     st.header("💰 Gestion des Paiements")
     # Ajouter un paiement
@@ -206,7 +216,7 @@ with tab_paiements:
                 key="client_paiement"
             )
             if client:
-                # Étape 2 : Sélection de l'opération
+                # Étape 2 : Sélection de l'opération (uniquement celles du client)
                 operations_client = get_operations_by_client(client["id"])
                 if not operations_client:
                     st.error("❌ Ce client n'a aucune opération en cours.")
@@ -214,14 +224,19 @@ with tab_paiements:
                     operation = st.selectbox(
                         "Opération *",
                         options=operations_client,
-                        format_func=lambda x: f"Opération {x['id']} - {format_montant(x['valeur'])}",
+                        format_func=lambda x: f"Opération {x['id']} - {format_montant(x['valeur'])} ({x['duree']} mois)",
                         key="operation_paiement"
                     )
                     if operation:
                         # Étape 3 : Type de paiement et montant
                         type_paiement = st.selectbox("Type de paiement *", ["ordinaire", "anticipe"], key="type_paiement")
                         if type_paiement == "ordinaire":
-                            montant = st.number_input("Montant (mensualité) *", min_value=1, value=int(operation["valeur"] * (1 + operation["taux"]/100) / operation["duree"]), key="montant_paiement")
+                            montant = st.number_input(
+                                "Montant (mensualité) *",
+                                min_value=1,
+                                value=int(operation["valeur"] * (1 + operation["taux"]/100) / operation["duree"]),
+                                key="montant_paiement"
+                            )
                         else:
                             montant = int(operation["valeur"] * operation["taux"] / 100)
                             st.info(f"💡 Montant calculé pour paiement anticipé : {format_montant(montant)}")
@@ -252,9 +267,8 @@ with tab_paiements:
                 <p><strong>Type :</strong> {paiement['type']}</p>
                 <p><strong>Montant :</strong> {format_montant(paiement['montant'])}</p>
                 <p><strong>Date :</strong> {paiement['date']}</p>
-                {st.button(f"🗑️ Supprimer", key=f"suppr_paiement_{paiement['id']}")}
             </div>
             """, unsafe_allow_html=True)
-            if st.button(f"Supprimer {paiement['id']}", key=f"suppr_paiement_hidden_{paiement['id']}"):
+            if st.button(f"🗑️ Supprimer", key=f"suppr_paiement_{paiement['id']}"):
                 st.session_state.paiements = [p for p in st.session_state.paiements if p["id"] != paiement["id"]]
                 st.rerun()
