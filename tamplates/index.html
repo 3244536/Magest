@@ -1,1 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de bord{% endblock %}
+{% block header %}Tableau de bord{% endblock %}
+
+{% block content %}
+<h2>Opérations en cours</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Client</th>
+            <th>Prochaine échéance</th>
+            <th>Montant à payer</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for op in operations %}
+        <tr class="en-cours">
+            <td>{{ op.client.nom }}</td>
+            <td>15/10/2025</td>
+            <td>{{ "{:,}".format(int(op.valeur * (1 + op.taux/100) / op.duree)).replace(",", " ") }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
 
