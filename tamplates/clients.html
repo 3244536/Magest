@@ -1,1 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Clients{% endblock %}
+{% block header %}Gestion des clients{% endblock %}
+
+{% block content %}
+<button class="btn btn-ajouter" onclick="document.getElementById('form-client').style.display='block'">Ajouter un client</button>
+<table>
+    <thead>
+        <tr>
+            <th>Nom</th>
+            <th>Description</th>
+            <th>Téléphone</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for client in clients %}
+        <tr>
+            <td>{{ client.nom }}</td>
+            <td>{{ client.description }}</td>
+            <td>{{ client.tel }}</td>
+            <td>
+                <button class="btn btn-modifier">Modifier</button>
+                <button class="btn btn-supprimer">Supprimer</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<form id="form-client" action="{{ url_for('ajouter_client') }}" method="post" style="display: none;">
+    <h3>Ajouter un client</h3>
+    <input type="text" name="nom" placeholder="Nom" required>
+    <input type="text" name="description" placeholder="Description">
+    <input type="text" name="tel" placeholder="Téléphone" required>
+    <button type="submit" class="btn btn-ajouter">Enregistrer</button>
+    <button type="button" class="btn btn-supprimer" onclick="document.getElementById('form-client').style.display='none'">Annuler</button>
+</form>
+{% endblock %}
 
