@@ -86,6 +86,14 @@ def creer_operation(client_id, valeur_marchandise, taux_benefice, duree_mois, st
     conn = sqlite3.connect('ventes_terme.db')
     cursor = conn.cursor()
     
+    # Vérifier s'il y a déjà une opération en cours pour ce client
+    cursor.execute('SELECT COUNT(*) FROM operations WHERE client_id = ? AND statut = "En cours"', (client_id,))
+    en_cours_count = cursor.fetchone()[0]
+    
+    if en_cours_count > 0:
+        conn.close()
+        return None, "Ce client a déjà une opération en cours. Veuillez la terminer avant d'en créer une nouvelle."
+
     montant_total = valeur_marchandise * (1 + taux_benefice / 100)
     montant_benefice = valeur_marchandise * (taux_benefice / 100)
     montant_mensualite = montant_total / duree_mois
@@ -99,7 +107,7 @@ def creer_operation(client_id, valeur_marchandise, taux_benefice, duree_mois, st
     operation_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    return operation_id
+    return operation_id, "Opération ajoutée avec succès!"
 
 def supprimer_operation(operation_id):
     conn = sqlite3.connect('ventes_terme.db')
@@ -175,16 +183,11 @@ def calculer_prochaine_echeance(op):
     total_paiements = get_total_paiements(op['id'])
     montant_total = op['montant_total']
     
-    # Logique de calcul simple
     if total_paiements >= montant_total:
         return "Opération terminée"
     else:
-        # Simplification : 30 jours par mois
         jours_passes = (datetime.now() - date_creation).days
         mois_passes = jours_passes // 30
-        
-        # Prochaine échéance est 30 jours après la dernière.
-        # Simplification pour cet exemple.
         prochaine_date = date_creation + timedelta(days=30 * (mois_passes + 1))
         return prochaine_date.strftime("%d/%m/%Y")
 
@@ -240,18 +243,16 @@ st.markdown("""
 # --- Interface Streamlit ---
 
 def main():
-    # Initialise la base de données au démarrage
     init_db()
 
     st.set_page_config(page_title="Gestion Commerciale", layout="wide")
     st.title("📊 Gestion des Clients, Opérations et Paiements")
 
-    # Onglets
     tab_accueil, tab_clients, tab_operations, tab_paiements = st.tabs(
         ["🏠 Tableau de bord", "👥 Clients", "📦 Opérations", "💰 Paiements"]
     )
 
-    # Onglet Accueil (Tableau de bord)
+    # Onglet Accueil
     with tab_accueil:
         st.header("📊 Tableau de bord")
         st.subheader("Opérations en cours")
@@ -260,12 +261,11 @@ def main():
         operations_en_cours = operations[operations['statut'] == 'En cours']
 
         if operations_en_cours.empty:
-            st.warning("Aucune opération en cours.")
+            st.info("Aucune opération en cours.")
         else:
             for _, op in operations_en_cours.iterrows():
                 montant_total = op['valeur_marchandise'] * (1 + op['taux_benefice'] / 100)
                 montant_mensualite = montant_total / op['duree_mois']
-                
                 prochaine_echeance = calculer_prochaine_echeance(op)
                 
                 st.markdown(f"""
@@ -282,7 +282,6 @@ def main():
     # Onglet Clients
     with tab_clients:
         st.header("👥 Gestion des Clients")
-        # Ajouter un client
         with st.expander("➕ Ajouter un client", expanded=False):
             with st.form("ajouter_client"):
                 nom = st.text_input("Nom *")
@@ -299,7 +298,6 @@ def main():
                     else:
                         st.error("❌ Le nom et le téléphone sont obligatoires.")
 
-        # Liste des clients
         st.subheader("Liste des clients")
         clients = get_clients()
         if clients.empty:
@@ -324,7 +322,6 @@ def main():
     # Onglet Opérations
     with tab_operations:
         st.header("📦 Gestion des Opérations")
-        # Ajouter une opération
         clients = get_clients()
         with st.expander("➕ Ajouter une opération", expanded=False):
             if clients.empty:
@@ -347,13 +344,15 @@ def main():
                     submitted = st.form_submit_button("Ajouter")
                     if submitted:
                         if valeur and taux and duree:
-                            creer_operation(client_id, valeur, taux, duree, statut, date_debut.strftime("%Y-%m-%d"))
-                            st.success("✅ Opération ajoutée avec succès !")
-                            st.rerun()
+                            operation_id, message = creer_operation(client_id, valeur, taux, duree, statut, date_debut.strftime("%Y-%m-%d"))
+                            if operation_id:
+                                st.success("✅ Opération ajoutée avec succès !")
+                                st.rerun()
+                            else:
+                                st.error(f"❌ {message}")
                         else:
                             st.error("❌ Tous les champs marqués d'une étoile sont obligatoires.")
         
-        # Liste des opérations
         st.subheader("Liste des opérations")
         operations = get_operations()
         if operations.empty:
@@ -380,7 +379,6 @@ def main():
     # Onglet Paiements
     with tab_paiements:
         st.header("💰 Gestion des Paiements")
-        # Ajouter un paiement
         clients = get_clients()
         with st.expander("➕ Ajouter un paiement", expanded=True):
             if clients.empty:
@@ -429,7 +427,6 @@ def main():
                             else:
                                 st.error("❌ Le montant et la date sont obligatoires.")
 
-        # Liste des paiements
         st.subheader("Liste des paiements")
         paiements = get_paiements()
         if paiements.empty:
